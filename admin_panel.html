@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - RFID Perionica</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f5f7fa;
+      padding: 20px;
+    }
+    .admin-container {
+      max-width: 700px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    input {
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #0066cc;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background: #004999;
+    }
+    .section {
+      margin-bottom: 40px;
+    }
+    .log {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    .card-list {
+      margin-top: 30px;
+      background: #f0f0f0;
+      padding: 15px;
+      border-radius: 8px;
+    }
+    h3 {
+      color: #333;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="admin-container">
+    <div class="section">
+      <h3>🆕 Dodavanje nove kartice</h3>
+      <input type="text" id="uid" placeholder="UID kartice">
+      <input type="text" id="name" placeholder="Ime">
+      <input type="text" id="password" placeholder="Lozinka">
+      <input type="number" id="credits" placeholder="Početni broj kredita">
+      <button onclick="saveCard()">💾 Sačuvaj karticu</button>
+      <div class="log" id="log"></div>
+    </div>
+
+    <div class="section">
+      <h3>➕ Dodavanje kredita postojećoj kartici</h3>
+      <input type="text" id="creditTarget" placeholder="Ime ILI UID">
+      <input type="number" id="creditAmount" placeholder="Broj kredita za dodavanje">
+      <button onclick="addCredits()">➕ Dodaj kredite</button>
+      <div class="log" id="creditLog"></div>
+    </div>
+
+    <div class="card-list" id="cardList">Učitavanje kartica...</div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBixHfZ1NG0WD1j_66D-nwzB32MwUGNQ7Y",
+      authDomain: "rfid-perionica.firebaseapp.com",
+      databaseURL: "https://rfid-perionica-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "rfid-perionica",
+      storageBucket: "rfid-perionica.appspot.com",
+      messagingSenderId: "1066783472631",
+      appId: "1:1066783472631:web:8daa38af163a5f15850cf2"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function saveCard() {
+      const uid = document.getElementById('uid').value.trim();
+      const name = document.getElementById('name').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const credits = parseInt(document.getElementById('credits').value.trim());
+
+      if (!uid || !name || !password || isNaN(credits)) {
+        document.getElementById('log').innerText = 'Popunite sva polja ispravno!';
+        return;
+      }
+
+      db.ref('cards/' + uid).set({
+        name: name,
+        password: password,
+        credits: credits
+      }, (error) => {
+        if (error) {
+          document.getElementById('log').innerText = '❌ Greška pri čuvanju kartice';
+        } else {
+          document.getElementById('log').innerText = '✅ Kartica je sačuvana';
+          loadCards();
+        }
+      });
+    }
+
+    function addCredits() {
+      const target = document.getElementById('creditTarget').value.trim();
+      const addAmount = parseInt(document.getElementById('creditAmount').value.trim());
+      const creditLog = document.getElementById('creditLog');
+
+      if (!target || isNaN(addAmount)) {
+        creditLog.innerText = 'Unesite ime ili UID i količinu kredita!';
+        return;
+      }
+
+      db.ref('cards').once('value', (snapshot) => {
+        let updated = false;
+        snapshot.forEach(child => {
+          const data = child.val();
+          if (child.key === target || data.name === target) {
+            const newCredits = (data.credits || 0) + addAmount;
+            db.ref('cards/' + child.key + '/credits').set(newCredits);
+            creditLog.innerText = `✅ Dodat ${addAmount} kredit(a) za ${data.name}`;
+            updated = true;
+          }
+        });
+        if (!updated) {
+          creditLog.innerText = '❌ Kartica nije pronađena po imenu ili UID-u';
+        }
+        loadCards();
+      });
+    }
+
+    function loadCards() {
+      db.ref('cards').once('value', (snapshot) => {
+        const listDiv = document.getElementById('cardList');
+        listDiv.innerHTML = '<h4>📋 Spisak kartica:</h4>';
+        snapshot.forEach(child => {
+          const card = child.val();
+          listDiv.innerHTML += `<div><b>${card.name}</b> (UID: ${child.key}) – Kredita: ${card.credits}</div>`;
+        });
+      });
+    }
+
+    loadCards();
+  </script>
+</body>
+</html>
