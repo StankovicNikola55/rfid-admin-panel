@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RFID Kredit Prijava</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getDatabase, ref, get, child } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBixHfZ1NG0WD1j_66D-nwzB32MwUGNQ7Y",
+      authDomain: "rfid-perionica.firebaseapp.com",
+      databaseURL: "https://rfid-perionica-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "rfid-perionica",
+      storageBucket: "rfid-perionica.appspot.com",
+      messagingSenderId: "1066783472631",
+      appId: "1:1066783472631:web:8daa38af163a5f15850cf2"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    window.login = async function login() {
+      const inputName = document.getElementById("name").value.trim();
+      const inputPass = document.getElementById("password").value.trim();
+      const resultEl = document.getElementById("result");
+      resultEl.textContent = "";
+      resultEl.className = "result";
+
+      if (!inputName || !inputPass) {
+        resultEl.textContent = "Unesite ime i lozinku.";
+        resultEl.classList.add("error");
+        return;
+      }
+
+      const dbRef = ref(db);
+      try {
+        const snapshot = await get(child(dbRef, `cards`));
+        if (snapshot.exists()) {
+          let found = false;
+          snapshot.forEach(childSnap => {
+            const data = childSnap.val();
+            if (data.name === inputName && data.password === inputPass) {
+              resultEl.innerHTML = `Zdravo, <b>${data.name}</b>! Imaš još <b>${data.credits}</b> kredita.`;
+              resultEl.classList.add("success");
+              found = true;
+            }
+          });
+          if (!found) {
+            resultEl.textContent = "Pogrešno ime ili lozinka.";
+            resultEl.classList.add("error");
+          }
+        } else {
+          resultEl.textContent = "Nema kartica u bazi.";
+          resultEl.classList.add("error");
+        }
+      } catch (error) {
+        console.error(error);
+        resultEl.textContent = "Greška pri pristupu bazi.";
+        resultEl.classList.add("error");
+      }
+    };
+  </script>
+  <style>
+    body {
+      background: linear-gradient(to right, #eef2f3, #8e9eab);
+      font-family: 'Poppins', sans-serif;
+      display: flex;
+      height: 100vh;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+    }
+    .container {
+      background: white;
+      padding: 30px 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      width: 320px;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+    .container:hover {
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+      transform: scale(1.02);
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    button {
+      background-color: #0066cc;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 16px;
+    }
+    button:hover {
+      background-color: #004a99;
+    }
+    .result {
+      margin-top: 25px;
+      font-weight: bold;
+      font-size: 1.2rem;
+    }
+    .error {
+      color: red;
+    }
+    .success {
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 style="margin-bottom: 20px; color: #333;">🧼 RFID Perionica – Prijava</h2>
+    <input type="text" id="name" placeholder="Ime sa kartice" />
+    <input type="password" id="password" placeholder="Lozinka" />
+    <button onclick="login()">🔐 Prijavi se</button>
+    <div class="result" id="result"></div>
+  </div>
+</body>
+</html>
+
